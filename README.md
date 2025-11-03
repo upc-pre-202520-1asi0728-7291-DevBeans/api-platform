@@ -242,20 +242,6 @@ La aplicación utiliza PostgreSQL en Supabase con las siguientes característica
 - **CORS**: Configurado para orígenes permitidos
 
 
-## Patrones Implementados
-
-### CQRS (Command Query Responsibility Segregation)
-- **Commands**: Operaciones que modifican estado (Create, Update, Delete)
-- **Queries**: Operaciones de solo lectura (Get, Search, List)
-- Servicios separados para commands y queries
-
-### DDD (Domain-Driven Design)
-- **Aggregates**: Entidades raíz que encapsulan lógica de negocio
-- **Entities**: Objetos con identidad única
-- **Domain Services**: Lógica de dominio que no pertenece a agregados
-- **Repositories**: Abstracción de persistencia
-
-
 ## 📝 Próximos Pasos
 
 Los siguientes Bounded Contexts están pendientes de implementación:
