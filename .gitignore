@@ -151,3 +151,21 @@ Thumbs.db
 
 # Azure
 .azure/
+
+# Vercel
+.vercel/
+
+# Heroku
+.heroku/
+
+# Netlify
+.netlify/
+
+# AWS
+.aws/
+
+# Google Cloud
+.gcloud/
+
+# Render
+.render/
