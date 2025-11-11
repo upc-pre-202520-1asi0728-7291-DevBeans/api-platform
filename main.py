@@ -50,7 +50,7 @@ app.include_router(classification_router)
 
 
 # Endpoints
-@app.get("/")
+@app.get("/", tags=["Default Backend Status"])
 async def root():
     """Endpoint raíz"""
     return {
@@ -60,7 +60,7 @@ async def root():
         "status": "running"
     }
 
-@app.get("/health")
+@app.get("/health", tags=["Default Backend Status"])
 async def health_check():
     """Health check endpoint"""
     return {
