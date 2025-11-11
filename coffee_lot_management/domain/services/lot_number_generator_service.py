@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from coffee_lot_management.infrastructure.persistence.database.repositories.coffee_lot_repository import CoffeeLotRepository
 
 
@@ -20,21 +21,27 @@ class LotNumberGeneratorService:
         """
         current_year = datetime.now().year
 
-        # Obtener el último número secuencial del año actual
-        lots_this_year = self.db.execute(
-            f"""
-            SELECT COUNT(*) FROM coffee_lots 
-            WHERE EXTRACT(YEAR FROM created_at) = {current_year}
+        # --- 2. CORRECCIÓN: ENVOLVER LA CONSULTA EN text() ---
+        # Usamos :year como un "parámetro vinculado" (parameter binding)
+        # para evitar la inyección SQL, en lugar de un f-string.
+        sql_query = text(
             """
-        ).scalar()
+            SELECT COUNT(*) FROM coffee_lots 
+            WHERE EXTRACT(YEAR FROM created_at) = :year
+            """
+        )
 
-        # Incrementar el secuencial
+        # --- 3. EJECUTAR LA CONSULTA PASANDO LOS PARÁMETROS ---
+        result = self.db.execute(sql_query, {"year": current_year})
+        lots_this_year = result.scalar()
+
+        # Incrementar el secuencial (tu lógica original)
         sequential = (lots_this_year or 0) + 1
 
         # Formato: LOT-2024-0001
         lot_number = f"LOT-{current_year}-{sequential:04d}"
 
-        # Verificar unicidad (por si acaso)
+        # Verificar unicidad (tu lógica original)
         while self.repository.exists_by_lot_number(lot_number):
             sequential += 1
             lot_number = f"LOT-{current_year}-{sequential:04d}"

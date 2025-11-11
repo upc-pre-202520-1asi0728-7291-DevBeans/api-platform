@@ -7,7 +7,7 @@ from shared.domain.database import init_db
 from iam_profile.interfaces.rest.controllers.auth_controller import router as auth_router
 from iam_profile.interfaces.rest.controllers.profile_controller import router as profile_router
 from coffee_lot_management.interfaces.rest.controllers.coffee_lot_controller import router as coffee_lot_router
-
+from grain_classification.interfaces.rest.controllers.classification_controller import router as classification_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -46,6 +46,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(coffee_lot_router)
+app.include_router(classification_router)
 
 
 # Endpoints

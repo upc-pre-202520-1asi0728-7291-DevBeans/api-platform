@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, status, Query
@@ -49,8 +49,8 @@ class CoffeeLotResource(BaseModel):
     altitude: Optional[float]
     latitude: float
     longitude: float
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
