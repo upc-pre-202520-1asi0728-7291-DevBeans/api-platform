@@ -83,6 +83,7 @@ class CVService:
         edge_density = np.sum(edges) / (255 * edges.size) if edges.size > 0 else 0
 
         # Umbral simple: si más del 5% son bordes, asumimos grietas
-        features['has_cracks'] = edge_density > 0.05
+        has_cracks_bool = edge_density > 0.05
+        features['has_cracks'] = str(has_cracks_bool)
 
         return features
