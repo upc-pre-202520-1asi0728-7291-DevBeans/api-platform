@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from enum import Enum
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, status, Query
@@ -20,14 +21,41 @@ from shared.domain.database import get_db
 router = APIRouter(prefix="/api/v1/coffee-lots", tags=["Coffee Lot Management"])
 
 
+# Enums para validación en la API
+class CoffeeVarietyEnum(str, Enum):
+    TYPICA = "TYPICA"
+    CATURRA = "CATURRA"
+    BOURBON = "BOURBON"
+    GEISHA = "GEISHA"
+    SL28 = "SL28"
+    SL34 = "SL34"
+    CASTILLO = "CASTILLO"
+    COLOMBIA = "COLOMBIA"
+
+
+class ProcessingMethodEnum(str, Enum):
+    WASHED = "WASHED"
+    NATURAL = "NATURAL"
+    HONEY = "HONEY"
+    SEMI_WASHED = "SEMI_WASHED"
+
+
+class LotStatusEnum(str, Enum):
+    REGISTERED = "REGISTERED"
+    PROCESSING = "PROCESSING"
+    CLASSIFIED = "CLASSIFIED"
+    CERTIFIED = "CERTIFIED"
+    SHIPPED = "SHIPPED"
+
+
 # Resources
 class RegisterCoffeeLotResource(BaseModel):
     """Resource para registrar nuevo lote"""
     producer_id: int
     harvest_date: date
-    coffee_variety: str
+    coffee_variety: CoffeeVarietyEnum  # Usa el Enum
     quantity: float = Field(gt=0)
-    processing_method: str
+    processing_method: ProcessingMethodEnum  # Usa el Enum
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     altitude: Optional[float] = None
@@ -59,7 +87,7 @@ class CoffeeLotResource(BaseModel):
 class UpdateCoffeeLotResource(BaseModel):
     """Resource para actualizar lote"""
     quantity: Optional[float] = Field(gt=0, default=None)
-    processing_method: Optional[str] = None
+    processing_method: Optional[ProcessingMethodEnum] = None
     altitude: Optional[float] = None
     soil_type: Optional[str] = None
     climate_zone: Optional[str] = None
@@ -67,7 +95,7 @@ class UpdateCoffeeLotResource(BaseModel):
 
 class LotStatusChangeResource(BaseModel):
     """Resource para cambio de estado"""
-    new_status: str
+    new_status: LotStatusEnum  # Usa el Enum
     change_reason: Optional[str] = None
 
 
@@ -142,14 +170,14 @@ async def change_lot_status(
 @router.get("/producer/{producer_id}", response_model=List[CoffeeLotResource])
 async def get_lots_by_producer(
         producer_id: int,
-        producer_status: Optional[str] = Query(None, description="Filtrar por estado"),
+        producer_status: Optional[LotStatusEnum] = Query(None, description="Filtrar por estado"),
         harvest_year: Optional[int] = Query(None, description="Filtrar por año de cosecha"),
         db: Session = Depends(get_db)
 ):
     """Obtiene todos los lotes de un productor"""
     query = GetCoffeeLotsByProducerQuery(
         producer_id=producer_id,
-        status=producer_status,
+        status=producer_status.value if producer_status else None,
         harvest_year=harvest_year
     )
     query_service = CoffeeLotQueryService(db)
@@ -159,24 +187,24 @@ async def get_lots_by_producer(
 
 @router.get("/search/advanced", response_model=List[CoffeeLotResource])
 async def search_coffee_lots(
-        variety: Optional[str] = Query(None),
-        processing_method: Optional[str] = Query(None),
+        variety: Optional[CoffeeVarietyEnum] = Query(None),
+        processing_method: Optional[ProcessingMethodEnum] = Query(None),
         min_altitude: Optional[float] = Query(None),
         max_altitude: Optional[float] = Query(None),
         start_date: Optional[date] = Query(None),
         end_date: Optional[date] = Query(None),
-        coffee_status: Optional[str] = Query(None),
+        coffee_status: Optional[LotStatusEnum] = Query(None),
         db: Session = Depends(get_db)
 ):
     """Búsqueda avanzada de lotes de café"""
     query = SearchCoffeeLotsQuery(
-        variety=variety,
-        processing_method=processing_method,
+        variety=variety.value if variety else None,
+        processing_method=processing_method.value if processing_method else None,
         min_altitude=min_altitude,
         max_altitude=max_altitude,
         start_date=start_date,
         end_date=end_date,
-        status=coffee_status
+        status=coffee_status.value if coffee_status else None
     )
     query_service = CoffeeLotQueryService(db)
     lots = query_service.handle_search_coffee_lots(query)

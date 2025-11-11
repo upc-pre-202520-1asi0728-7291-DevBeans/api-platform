@@ -1,8 +1,9 @@
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-import os
-
 from shared.infrastructure.persistence.database.repositories.settings import settings
 from shared.domain.database import init_db
 from iam_profile.interfaces.rest.controllers.auth_controller import router as auth_router
@@ -20,9 +21,9 @@ async def lifespan(_app: FastAPI):
     print(f"{settings.PROJECT_NAME} is running")
     print(f"API Documentation: http://localhost:8000/docs")
 
-    # Verificar configuración del modelo
-    model_url = os.environ.get("MODEL_BLOB_URL")
-    if model_url:
+    # Verificar configuración del modelo - USA SETTINGS en lugar de os.environ
+    model_url = settings.MODEL_BLOB_URL
+    if model_url and model_url != "https://devbeansteamstorage.blob.core.windows.net/ml-models/defect_detector.h5":
         safe_url = model_url.split('?')[0] if '?' in model_url else model_url
         print(f"Model URL configured: {safe_url}")
     else:
@@ -74,13 +75,16 @@ async def root():
 @app.get("/health", tags=["Default Backend Status"])
 async def health_check():
     """Health check endpoint con verificación de configuración"""
-    model_configured = bool(os.environ.get("MODEL_BLOB_URL"))
+    # USA SETTINGS en lugar de os.environ
+    model_url = settings.MODEL_BLOB_URL
+    model_configured = bool(model_url and model_url != "https://your-blob-storage-url-here")
 
     return {
         "status": "healthy",
         "database": "connected",
         "ml_model": {
             "blob_storage_configured": model_configured,
+            "configured_url": model_url if model_configured else None,
             "fallback_strategy": "local → blob storage"
         }
     }

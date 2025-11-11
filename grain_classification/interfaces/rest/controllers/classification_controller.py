@@ -64,8 +64,7 @@ class ClassificationSessionResponse(BaseModel):
     completed_at: datetime | None
 
     class Config:
-        orm_mode = True  # Permite a Pydantic leer desde el objeto SQLAlchemy
-
+        from_attributes = True  # Permite a Pydantic leer desde el objeto SQLAlchemy
 
 @router.post("/session", response_model=ClassificationSessionResponse, status_code=201)
 async def start_and_process_classification_session(

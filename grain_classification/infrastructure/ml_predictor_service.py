@@ -5,7 +5,7 @@ import requests
 import time
 
 # This URL will be set via an Azure App Setting/Environment Variable
-MODEL_BLOB_URL = os.environ.get("MODEL_URL")
+MODEL_BLOB_URL = os.environ.get("MODEL_BLOB_URL")
 
 
 class MLPredictorService:

@@ -7,11 +7,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "BeanDetect AI"
 
     # Database Settings (Supabase)
-    DATABASE_HOST: str = "aws-1-us-east-2.pooler.supabase.com"
+    DATABASE_HOST: str = "aws-1-us-east-1.pooler.supabase.com"
     DATABASE_PORT: int = 6543
     DATABASE_NAME: str = "postgres"
-    DATABASE_USER: str = "postgres.zmagawflbbzgycgqfisv"
-    DATABASE_PASSWORD: str = "devbeans_db_supabase"
+    DATABASE_USER: str = "postgres.tswxhjvhakahpbqxtnoq"
+    DATABASE_PASSWORD: str = "devbeans_db"
     DATABASE_POOL_MODE: str = "transaction"
 
     # Security
@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-
+    # BLOB Storage
+    MODEL_BLOB_URL: str = "https://devbeansteamstorage.blob.core.windows.net/ml-models/defect_detector.h5"
 
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
