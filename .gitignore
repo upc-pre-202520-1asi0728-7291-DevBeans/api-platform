@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyc
 
 # C extensions
 *.c
@@ -143,7 +144,7 @@ cython_debug/
 .DS_Store
 Thumbs.db
 
-# ML Models (si no quieres versionarlos)
+# ML Models
 *.h5
 *.pkl
 *.joblib

@@ -8,11 +8,10 @@ class Settings(BaseSettings):
 
     # Database Settings (Supabase)
     DATABASE_HOST: str = "aws-1-us-east-1.pooler.supabase.com"
-    DATABASE_PORT: int = 6543
+    DATABASE_PORT: int = 5432
     DATABASE_NAME: str = "postgres"
     DATABASE_USER: str = "postgres.tswxhjvhakahpbqxtnoq"
     DATABASE_PASSWORD: str = "devbeans_db"
-    DATABASE_POOL_MODE: str = "transaction"
 
     # Security
     SECRET_KEY: str = "your-secret-key-here-change-in-production"

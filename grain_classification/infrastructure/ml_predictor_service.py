@@ -3,9 +3,7 @@ from tensorflow import keras
 import os
 import requests
 import time
-
-# This URL will be set via an Azure App Setting/Environment Variable
-MODEL_BLOB_URL = os.environ.get("MODEL_BLOB_URL")
+from shared.infrastructure.persistence.database.repositories.settings import settings
 
 
 class MLPredictorService:
@@ -22,23 +20,32 @@ class MLPredictorService:
 
     def _download_model_from_blob(self) -> bool:
         """Descarga el modelo de ml desde Azure Blob Storage."""
-        if not MODEL_BLOB_URL:
-            print("ERROR: MODEL_BLOB_URL no está configurada en Azure App Settings.")
+        # Usar settings en lugar de os.environ
+        model_blob_url = settings.MODEL_BLOB_URL
+
+        # Verificar que no sea el valor por defecto
+        if not model_blob_url or model_blob_url == "https://your-blob-storage-url-here":
+            print("ERROR: MODEL_BLOB_URL no está configurada correctamente.")
+            print("Valor actual:", model_blob_url)
+            print("Verifica tu archivo .env o variables de entorno")
             return False
 
-        print(f"Descargando modelo desde Blob Storage: {MODEL_BLOB_URL}")
+        print(f"Descargando modelo desde Blob Storage...")
+        print(f"URL: {model_blob_url.split('?')[0] if '?' in model_blob_url else model_blob_url}")
 
         try:
             # Crear el directorio si no existe
             os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
 
             # Descargar con streaming para archivos grandes
-            response = requests.get(MODEL_BLOB_URL, stream=True, timeout=300)
+            response = requests.get(model_blob_url, stream=True, timeout=300)
             response.raise_for_status()
 
             # Guardar el archivo en chunks
             total_size = int(response.headers.get('content-length', 0))
             downloaded = 0
+
+            print(f"Tamaño total: {total_size / (1024 ** 2):.1f} MB")
 
             with open(self.model_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
@@ -47,58 +54,66 @@ class MLPredictorService:
                         downloaded += len(chunk)
                         # Log progreso cada 50MB
                         if downloaded % (50 * 1024 * 1024) == 0:
+                            progress = (downloaded / total_size * 100) if total_size > 0 else 0
                             print(
-                                f"  Descargado: {downloaded / (1024 ** 2):.1f} MB / {total_size / (1024 ** 2):.1f} MB")
+                                f"  Progreso: {downloaded / (1024 ** 2):.1f} MB / {total_size / (1024 ** 2):.1f} MB ({progress:.1f}%)")
 
-            print(f"Descarga completada: {downloaded / (1024 ** 2):.1f} MB")
+            print(f"✅ Descarga completada: {downloaded / (1024 ** 2):.1f} MB")
             return True
 
         except requests.exceptions.RequestException as e:
-            print(f"ERROR DE RED al descargar desde Blob Storage: {e}")
+            print(f"❌ ERROR DE RED al descargar desde Blob Storage: {e}")
             return False
         except Exception as e:
-            print(f"ERROR al guardar modelo descargado: {e}")
+            print(f"❌ ERROR al guardar modelo descargado: {e}")
             return False
 
     def _load_model(self):
         """
         Carga el modelo CNN con estrategia de fallback:
-        1. Intenta cargar desde ruta local
-        2. Si falla, descarga desde Blob Storage e intenta de nuevo
+        1. Intenta cargar desde ruta local primero (rápido)
+        2. Si falla, descarga desde Blob Storage (lento)
+        3. Intenta cargar después de descarga
         """
-        # ESTRATEGIA 1: Intentar carga local primero
+        # ESTRATEGIA 1: Intentar carga local primero (lo más común)
         if os.path.exists(self.model_path):
             try:
+                print(f"📂 Cargando modelo desde: {self.model_path}")
                 model = keras.models.load_model(self.model_path)
                 file_size = os.path.getsize(self.model_path) / (1024 ** 2)
-                print(f"Modelo CNN cargado desde ruta local: {self.model_path} ({file_size:.1f} MB)")
+                print(f"Modelo CNN cargado desde disco ({file_size:.1f} MB)")
                 return model
             except Exception as e:
                 print(f"Falló carga local del modelo: {e}")
-                print("   Intentando descarga desde Blob Storage...")
+                print("Intentando descarga desde Blob Storage...")
                 # Eliminar archivo corrupto
                 try:
                     os.remove(self.model_path)
-                except:
-                    pass
+                    print("Archivo corrupto eliminado")
+                except Exception as remove_error:
+                    print(f"No se pudo eliminar archivo corrupto: {remove_error}")
 
-        # ESTRATEGIA 2: Descargar desde Blob Storage
-        print(f"Modelo no encontrado localmente. Descargando desde Blob Storage...")
+        # ESTRATEGIA 2: Descargar desde Blob Storage (solo si no existe localmente)
+        print(f"📥 Modelo no encontrado localmente. Descargando desde Blob Storage...")
 
         if not self._download_model_from_blob():
-            print("CRÍTICO: No se pudo descargar el modelo desde Blob Storage")
+            print("❌ CRÍTICO: No se pudo descargar el modelo desde Blob Storage")
+            print(f"   Ruta esperada: {self.model_path}")
+            print(f"   Configuración actual: MODEL_BLOB_URL = {settings.MODEL_BLOB_URL[:50]}...")
             return None
 
         # Esperar un momento para asegurar que el archivo esté completamente escrito
-        time.sleep(2)
+        time.sleep(1)
 
         # ESTRATEGIA 3: Intentar carga después de descarga
         try:
+            print(f"📂 Cargando modelo descargado...")
             model = keras.models.load_model(self.model_path)
-            print(f"Modelo CNN cargado exitosamente después de descarga")
+            file_size = os.path.getsize(self.model_path) / (1024 ** 2)
+            print(f"✅ Modelo CNN cargado exitosamente después de descarga ({file_size:.1f} MB)")
             return model
         except Exception as e:
-            print(f"CRÍTICO: Error al cargar modelo después de descarga: {e}")
+            print(f"❌ CRÍTICO: Error al cargar modelo después de descarga: {e}")
             return None
 
     def predict_color_percentages(self, processed_image: np.ndarray) -> dict | None:
@@ -106,7 +121,7 @@ class MLPredictorService:
         Predice los porcentajes de confianza para cada clase de color.
         """
         if self.cnn_model is None:
-            print("Modelo no disponible para predicción")
+            print("❌ Modelo no disponible para predicción")
             return None
 
         try:
@@ -130,5 +145,5 @@ class MLPredictorService:
             return predictions
 
         except Exception as e:
-            print(f"Error durante predicción CNN: {e}")
+            print(f"❌ Error durante predicción CNN: {e}")
             return None
