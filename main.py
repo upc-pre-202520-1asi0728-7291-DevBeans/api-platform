@@ -13,7 +13,7 @@ from shared.domain.database import init_db
 from iam_profile.interfaces.rest.controllers.auth_controller import router as auth_router
 from iam_profile.interfaces.rest.controllers.profile_controller import router as profile_router
 from coffee_lot_management.interfaces.rest.controllers.coffee_lot_controller import router as coffee_lot_router
-from grain_classification.interfaces.rest.controllers.classification_controller import router as classification_router
+# from grain_classification.interfaces.rest.controllers.classification_controller import router as classification_router
 
 
 @asynccontextmanager
@@ -28,6 +28,7 @@ async def lifespan(_app: FastAPI):
     init_db()
     print("Base de datos inicializada")
 
+    '''
     # Startup - Verificar modelo ML
     print("\n[2/3] Verificando modelo de Machine Learning...")
     model_url = settings.MODEL_BLOB_URL
@@ -56,6 +57,7 @@ async def lifespan(_app: FastAPI):
     except Exception as e:
         print(f"Error al precargar modelo: {e}")
         print("   El modelo se intentará cargar en la primera petición")
+    '''
 
     print("\n" + "=" * 60)
     print(f"{settings.PROJECT_NAME} está corriendo")
@@ -90,7 +92,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(coffee_lot_router)
-app.include_router(classification_router)
+# app.include_router(classification_router)
 
 
 # Endpoints
@@ -104,7 +106,7 @@ async def root():
         "status": "running"
     }
 
-
+'''
 @app.get("/health", tags=["Default Backend Status"])
 async def health_check():
     """Health check endpoint con verificación de configuración"""
@@ -133,7 +135,7 @@ async def health_check():
             "fallback_strategy": "local → blob storage"
         }
     }
-
+'''
 
 if __name__ == "__main__":
     import uvicorn
