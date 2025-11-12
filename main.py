@@ -16,6 +16,12 @@ from coffee_lot_management.interfaces.rest.controllers.coffee_lot_controller imp
 # from grain_classification.interfaces.rest.controllers.classification_controller import router as classification_router
 
 
+# Backend configuration
+BACKEND_URL = os.environ.get(
+    "BACKEND_URL",
+    "https://bean-detect-ai-api-platform.azurewebsites.net"
+)
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Eventos de inicio y cierre del ciclo de vida de la aplicación"""
@@ -81,7 +87,7 @@ app = FastAPI(
 
 # Configurar CORS
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware, # type: ignore
     allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
@@ -100,10 +106,11 @@ app.include_router(coffee_lot_router)
 async def root():
     """Endpoint raíz"""
     return {
-        "message": "BeanDetect AI API",
+        "service": "BeanDetect AI API",
         "version": "1.0.0",
-        "docs": "/docs",
-        "status": "running"
+        "status": "running",
+        "backend": BACKEND_URL,
+        "docs": "/docs"
     }
 
 '''
@@ -144,8 +151,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,
-        reload_delay=0.5,
-        reload_includes=["*.py"],
         log_level="info"
     )
