@@ -28,7 +28,7 @@ class CloudinaryService:
         Sube la imagen de un grano a Cloudinary
 
         Args:
-            grain_image: Imagen del grano en formato numpy array (OpenCV)
+            grain_image: Imagen del grano en formato numpy array (OpenCV BGR)
             session_id: ID de la sesión de clasificación
             grain_index: Índice del grano en la sesión
 
@@ -36,11 +36,13 @@ class CloudinaryService:
             dict con 'url' y 'public_id' de la imagen subida
         """
         try:
-            # Convertir la imagen de BGR (OpenCV) a RGB
-            rgb_image = cv2.cvtColor(grain_image, cv2.COLOR_BGR2RGB)
+            # ⚠️ NO convertir a RGB aquí
+            # cv2.imencode() espera BGR y genera JPEG correctamente
+            # La conversión BGR->RGB + imencode() causa inversión de colores
 
-            # Codificar la imagen a formato JPEG en memoria
-            is_success, buffer = cv2.imencode(".jpg", rgb_image)
+            # Codificar la imagen directamente a formato JPEG en memoria
+            is_success, buffer = cv2.imencode(".jpg", grain_image,
+                                              [cv2.IMWRITE_JPEG_QUALITY, 95])
             if not is_success:
                 raise ValueError("No se pudo codificar la imagen")
 
