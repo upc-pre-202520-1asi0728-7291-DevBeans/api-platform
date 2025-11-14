@@ -187,24 +187,20 @@ async def get_lots_by_producer(
 
 @router.get("/search/advanced", response_model=List[CoffeeLotResource])
 async def search_coffee_lots(
-        variety: Optional[CoffeeVarietyEnum] = Query(None),
-        processing_method: Optional[ProcessingMethodEnum] = Query(None),
-        min_altitude: Optional[float] = Query(None),
-        max_altitude: Optional[float] = Query(None),
-        start_date: Optional[date] = Query(None),
-        end_date: Optional[date] = Query(None),
-        coffee_status: Optional[LotStatusEnum] = Query(None),
+        variety: Optional[CoffeeVarietyEnum] = Query(None, description="Filtrar por variedad de café"),
+        processing_method: Optional[ProcessingMethodEnum] = Query(None, description="Filtrar por método de procesamiento"),
+        coffee_status: Optional[LotStatusEnum] = Query(None, description="Filtrar por estado del lote"),
+        start_date: Optional[date] = Query(None, description="Fecha de cosecha desde (inclusive)"),
+        end_date: Optional[date] = Query(None, description="Fecha de cosecha hasta (inclusive)"),
         db: Session = Depends(get_db)
 ):
-    """Búsqueda avanzada de lotes de café"""
+    """Búsqueda avanzada de lotes de café con múltiples filtros"""
     query = SearchCoffeeLotsQuery(
         variety=variety.value if variety else None,
         processing_method=processing_method.value if processing_method else None,
-        min_altitude=min_altitude,
-        max_altitude=max_altitude,
+        status=coffee_status.value if coffee_status else None,
         start_date=start_date,
-        end_date=end_date,
-        status=coffee_status.value if coffee_status else None
+        end_date=end_date
     )
     query_service = CoffeeLotQueryService(db)
     lots = query_service.handle_search_coffee_lots(query)

@@ -3,7 +3,8 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from coffee_lot_management.domain.model.aggregates.coffee_lot import CoffeeLot, LotStatus, CoffeeVariety
+from coffee_lot_management.domain.model.aggregates.coffee_lot import CoffeeLot, LotStatus, CoffeeVariety, \
+    ProcessingMethod
 from coffee_lot_management.domain.model.queries.get_coffee_lot_by_id_query import GetCoffeeLotByIdQuery
 from coffee_lot_management.domain.model.queries.get_coffee_lots_by_producer_query import GetCoffeeLotsByProducerQuery
 from coffee_lot_management.domain.model.queries.get_lot_traceability_query import GetLotTraceabilityQuery
@@ -63,6 +64,14 @@ class CoffeeLotQueryService:
             except KeyError:
                 pass
 
+        # FIX: Agregado el filtro de processing_method que faltaba
+        if query.processing_method:
+            try:
+                processing_enum = ProcessingMethod[query.processing_method.upper()]
+                base_query = base_query.filter(CoffeeLot.processing_method == processing_enum)
+            except KeyError:
+                pass
+
         if query.status:
             try:
                 status_enum = LotStatus[query.status.upper()]
@@ -70,12 +79,7 @@ class CoffeeLotQueryService:
             except KeyError:
                 pass
 
-        if query.min_altitude:
-            base_query = base_query.filter(CoffeeLot.altitude >= query.min_altitude)
-
-        if query.max_altitude:
-            base_query = base_query.filter(CoffeeLot.altitude <= query.max_altitude)
-
+        # Filtros de fecha para harvest_date
         if query.start_date:
             base_query = base_query.filter(CoffeeLot.harvest_date >= query.start_date)
 
