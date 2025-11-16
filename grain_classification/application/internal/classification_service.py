@@ -1,6 +1,7 @@
 import time
 import cv2
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from grain_classification.domain.model.aggregates.classification_session import ClassificationSession
 from grain_classification.domain.model.aggregates.grain_analysis import GrainAnalysis
@@ -11,6 +12,7 @@ from grain_classification.infrastructure.ml_predictor_service import MLPredictor
 from grain_classification.infrastructure.cloudinary_service import CloudinaryService
 from grain_classification.infrastructure.persistence.database.repositories.classification_session_repository import \
     ClassificationSessionRepository
+from shared.infrastructure.notification_service import email_service
 
 
 class ClassificationApplicationService:
@@ -29,7 +31,8 @@ class ClassificationApplicationService:
         self.cloudinary_service = cloudinary_service
 
     def start_classification_session(self, coffee_lot_id: int, image_bytes: bytes,
-                                     user_id: int) -> ClassificationSession:
+                                     user_id: int, user_email: Optional[str] = None,
+                                     send_email_notification: bool = False) -> ClassificationSession:
 
         start_time = time.time()
 
@@ -108,5 +111,36 @@ class ClassificationApplicationService:
         self.repo.add(session)
         self.repo.commit()
         self.repo.refresh(session)
+
+        # 12. Enviar notificación por email si está habilitada y hay email
+        if send_email_notification and user_email and session.status == "COMPLETED":
+            try:
+                # Obtener datos del lote de café (opcional)
+                from coffee_lot_management.infrastructure.persistence.database.repositories.coffee_lot_repository import \
+                    CoffeeLotRepository
+                lot_repo = CoffeeLotRepository(self.db)
+                coffee_lot = lot_repo.find_by_id(coffee_lot_id)
+                
+                coffee_lot_data = {
+                    'lot_number': coffee_lot.lot_number if coffee_lot else 'N/A'
+                }
+                
+                # Convertir sesión a dict para el servicio de email
+                session_dict = {
+                    'session_id_vo': session.session_id_vo,
+                    'classification_result': session.classification_result,
+                    'processing_time_seconds': session.processing_time_seconds,
+                    'completed_at': session.completed_at
+                }
+                
+                email_service.send_classification_report(
+                    recipient_email=user_email,
+                    classification_data=session_dict,
+                    coffee_lot_data=coffee_lot_data
+                )
+                print(f"📧 Notificación enviada a {user_email}")
+            except Exception as e:
+                print(f"⚠️ Error al enviar notificación por email: {e}")
+                # No fallamos toda la clasificación si falla el envío de email
 
         return session
