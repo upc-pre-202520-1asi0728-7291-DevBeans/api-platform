@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Path
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Path, Body
 from sqlalchemy.orm import Session
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 
 from grain_classification.application.internal.classification_service import ClassificationApplicationService
@@ -12,6 +12,7 @@ from grain_classification.infrastructure.cv_service import CVService
 from grain_classification.infrastructure.ml_predictor_service import MLPredictorService
 from grain_classification.infrastructure.cloudinary_service import CloudinaryService
 from shared.domain.database import get_db
+from shared.infrastructure.notification_service import email_service
 
 
 # --- Inyección de Dependencias ---
@@ -110,17 +111,33 @@ class OverallAverageQualityResponse(BaseModel):
     quality_scale: str
 
 
+class SendReportRequest(BaseModel):
+    """DTO para enviar reporte por email"""
+    session_id: int
+    recipient_email: EmailStr
+
+
+class SendReportResponse(BaseModel):
+    """DTO de respuesta al enviar reporte"""
+    success: bool
+    message: str
+
+
 # --- Endpoints ---
 
 @router.post("/session", response_model=ClassificationSessionResponse, status_code=201)
 async def start_and_process_classification_session(
         coffee_lot_id: int = Form(...),
         image: UploadFile = File(...),
+        user_email: Optional[str] = Form(None),
+        send_email_notification: bool = Form(False),
         service: ClassificationApplicationService = Depends(get_classification_service)
 ):
     """
     Inicia, procesa y completa una sesión de clasificación a partir de una imagen.
     Guarda los resultados en la base de datos y las imágenes en Cloudinary.
+    
+    Opcionalmente puede enviar una notificación por email al completar la clasificación.
     """
     if image.content_type not in ["image/jpeg", "image/png"]:
         raise HTTPException(
@@ -134,7 +151,9 @@ async def start_and_process_classification_session(
         session = service.start_classification_session(
             coffee_lot_id=coffee_lot_id,
             image_bytes=image_bytes,
-            user_id=1  # TODO: Reemplazar con ID de usuario autenticado
+            user_id=1,  # TODO: Reemplazar con ID de usuario autenticado
+            user_email=user_email,
+            send_email_notification=send_email_notification
         )
 
         if session.status == "FAILED":
@@ -248,3 +267,74 @@ async def get_session_by_id(
         )
 
     return session
+
+
+@router.post("/send-report", response_model=SendReportResponse)
+async def send_classification_report_email(
+        request: SendReportRequest = Body(...),
+        query_service: ClassificationQueryService = Depends(get_query_service),
+        db: Session = Depends(get_db)
+):
+    """
+    Envía un reporte de clasificación por correo electrónico.
+    
+    Este endpoint permite enviar manualmente el reporte de una sesión 
+    de clasificación completada a cualquier dirección de email.
+    """
+    # Obtener la sesión
+    session = query_service.get_session_by_id(request.session_id)
+    
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No se encontró la sesión {request.session_id}"
+        )
+    
+    if session.status != "COMPLETED":
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden enviar reportes de sesiones completadas"
+        )
+    
+    try:
+        # Obtener datos del lote de café
+        from coffee_lot_management.infrastructure.persistence.database.repositories.coffee_lot_repository import \
+            CoffeeLotRepository
+        lot_repo = CoffeeLotRepository(db)
+        coffee_lot = lot_repo.find_by_id(session.coffee_lot_id)
+        
+        coffee_lot_data = {
+            'lot_number': coffee_lot.lot_number if coffee_lot else 'N/A'
+        }
+        
+        # Convertir sesión a dict
+        session_dict = {
+            'session_id_vo': session.session_id_vo,
+            'classification_result': session.classification_result,
+            'processing_time_seconds': session.processing_time_seconds,
+            'completed_at': session.completed_at
+        }
+        
+        # Enviar email
+        success = email_service.send_classification_report(
+            recipient_email=request.recipient_email,
+            classification_data=session_dict,
+            coffee_lot_data=coffee_lot_data
+        )
+        
+        if success:
+            return SendReportResponse(
+                success=True,
+                message=f"Reporte enviado exitosamente a {request.recipient_email}"
+            )
+        else:
+            return SendReportResponse(
+                success=False,
+                message="No se pudo enviar el reporte. Verifique la configuración SMTP."
+            )
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al enviar el reporte: {str(e)}"
+        )
