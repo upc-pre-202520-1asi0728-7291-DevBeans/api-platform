@@ -136,8 +136,6 @@ async def start_and_process_classification_session(
     """
     Inicia, procesa y completa una sesión de clasificación a partir de una imagen.
     Guarda los resultados en la base de datos y las imágenes en Cloudinary.
-    
-    Opcionalmente puede enviar una notificación por email al completar la clasificación.
     """
     if image.content_type not in ["image/jpeg", "image/png"]:
         raise HTTPException(
@@ -277,36 +275,43 @@ async def send_classification_report_email(
 ):
     """
     Envía un reporte de clasificación por correo electrónico.
-    
-    Este endpoint permite enviar manualmente el reporte de una sesión 
+
+    Este endpoint permite enviar manualmente el reporte de una sesión
     de clasificación completada a cualquier dirección de email.
     """
     # Obtener la sesión
     session = query_service.get_session_by_id(request.session_id)
-    
+
     if not session:
         raise HTTPException(
             status_code=404,
             detail=f"No se encontró la sesión {request.session_id}"
         )
-    
+
     if session.status != "COMPLETED":
         raise HTTPException(
             status_code=400,
             detail="Solo se pueden enviar reportes de sesiones completadas"
         )
-    
+
     try:
         # Obtener datos del lote de café
         from coffee_lot_management.infrastructure.persistence.database.repositories.coffee_lot_repository import \
             CoffeeLotRepository
         lot_repo = CoffeeLotRepository(db)
         coffee_lot = lot_repo.find_by_id(session.coffee_lot_id)
-        
+
         coffee_lot_data = {
             'lot_number': coffee_lot.lot_number if coffee_lot else 'N/A'
         }
-        
+
+        # Si es un solo grano, agregar sus datos específicos
+        if session.total_grains_analyzed == 1 and session.analyses:
+            grain = session.analyses[0]
+            coffee_lot_data['grain_id'] = grain.id
+            coffee_lot_data['final_score'] = (grain.final_score * 100) if grain.final_score else 0
+            coffee_lot_data['final_category'] = grain.final_category or 'N/A'
+
         # Convertir sesión a dict
         session_dict = {
             'session_id_vo': session.session_id_vo,
@@ -314,14 +319,14 @@ async def send_classification_report_email(
             'processing_time_seconds': session.processing_time_seconds,
             'completed_at': session.completed_at
         }
-        
+
         # Enviar email
         success = email_service.send_classification_report(
             recipient_email=request.recipient_email,
             classification_data=session_dict,
             coffee_lot_data=coffee_lot_data
         )
-        
+
         if success:
             return SendReportResponse(
                 success=True,
@@ -332,7 +337,7 @@ async def send_classification_report_email(
                 success=False,
                 message="No se pudo enviar el reporte. Verifique la configuración SMTP."
             )
-            
+
     except Exception as e:
         raise HTTPException(
             status_code=500,

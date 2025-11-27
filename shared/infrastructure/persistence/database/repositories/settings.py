@@ -6,12 +6,12 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "BeanDetect AI"
 
-    # Database Settings (Supabase)
-    DATABASE_HOST: str = "aws-1-us-east-1.pooler.supabase.com"
+    # Database Settings
+    DATABASE_HOST: str = "localhost"  # o "127.0.0.1"
     DATABASE_PORT: int = 5432
-    DATABASE_NAME: str = "postgres"
-    DATABASE_USER: str = "postgres.tswxhjvhakahpbqxtnoq"
-    DATABASE_PASSWORD: str = "devbeans_db"
+    DATABASE_NAME: str = "dev_beans_localhost"  # nombre de la BD local
+    DATABASE_USER: str = "postgres"  # nombre de usuario local
+    DATABASE_PASSWORD: str = "1234"
 
     # Security
     SECRET_KEY: str = "your-secret-key-here-change-in-production"
@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str = "your-cloud-name"
     CLOUDINARY_API_KEY: str = "your-api-key"
     CLOUDINARY_API_SECRET: str = "your-api-secret"
+
+    # SMTP Email Configuration
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_SENDER_EMAIL: str = ""
 
     @property
     def DATABASE_URL(self) -> str:

@@ -124,7 +124,14 @@ class ClassificationApplicationService:
                 coffee_lot_data = {
                     'lot_number': coffee_lot.lot_number if coffee_lot else 'N/A'
                 }
-                
+
+                # Si es un solo grano, agregar sus datos específicos
+                if session.total_grains_analyzed == 1 and session.analyses:
+                    grain = session.analyses[0]
+                    coffee_lot_data['grain_id'] = grain.id
+                    coffee_lot_data['final_score'] = (grain.final_score * 100) if grain.final_score else 0
+                    coffee_lot_data['final_category'] = grain.final_category or 'N/A'
+
                 # Convertir sesión a dict para el servicio de email
                 session_dict = {
                     'session_id_vo': session.session_id_vo,
@@ -132,15 +139,15 @@ class ClassificationApplicationService:
                     'processing_time_seconds': session.processing_time_seconds,
                     'completed_at': session.completed_at
                 }
-                
+
                 email_service.send_classification_report(
                     recipient_email=user_email,
                     classification_data=session_dict,
                     coffee_lot_data=coffee_lot_data
                 )
-                print(f"📧 Notificación enviada a {user_email}")
+                print(f"Notificación enviada a {user_email}")
             except Exception as e:
-                print(f"⚠️ Error al enviar notificación por email: {e}")
+                print(f"Error al enviar notificación por email: {e}")
                 # No fallamos toda la clasificación si falla el envío de email
 
         return session
