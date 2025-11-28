@@ -7,11 +7,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "BeanDetect AI"
 
     # Database Settings
-    DATABASE_HOST: str = "localhost"  # o "127.0.0.1"
+    DATABASE_HOST: str = "dev-beans-production-db.postgres.database.azure.com"
     DATABASE_PORT: int = 5432
-    DATABASE_NAME: str = "dev_beans_localhost"  # nombre de la BD local
-    DATABASE_USER: str = "postgres"  # nombre de usuario local
-    DATABASE_PASSWORD: str = "1234"
+    DATABASE_NAME: str = "dev_beans_azure_db"  # nombre de la BD
+    DATABASE_USER: str = "useradmin"  # nombre de usuario
+    DATABASE_PASSWORD: str = "dev-beans-1234"
 
     # Security
     SECRET_KEY: str = "your-secret-key-here-change-in-production"
