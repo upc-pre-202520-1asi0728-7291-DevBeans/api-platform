@@ -10,11 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from shared.infrastructure.persistence.database.repositories.settings import settings
 from shared.domain.database import init_db
+# Importar routers
 from iam_profile.interfaces.rest.controllers.auth_controller import router as auth_router
 from iam_profile.interfaces.rest.controllers.profile_controller import router as profile_router
 from iam_profile.interfaces.rest.controllers.user_controller import router as user_router
 from coffee_lot_management.interfaces.rest.controllers.coffee_lot_controller import router as coffee_lot_router
 from grain_classification.interfaces.rest.controllers.classification_controller import router as classification_router
+from traceability_certification.interfaces.rest.controllers.certification_controller import router as certification_router
+
 
 # Backend configuration
 BACKEND_URL = os.environ.get(
@@ -69,6 +72,7 @@ app.include_router(profile_router)
 app.include_router(user_router)
 app.include_router(coffee_lot_router)
 app.include_router(classification_router)
+app.include_router(certification_router)
 
 
 # Endpoints
@@ -80,7 +84,8 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "backend": BACKEND_URL,
-        "docs": "/docs"
+        "docs": "/docs",
+        "re-docs": "/redoc"
     }
 
 
