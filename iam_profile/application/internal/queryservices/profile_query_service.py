@@ -7,10 +7,12 @@ from iam_profile.domain.model.entities.producer_profile import ProducerProfile
 from iam_profile.domain.model.entities.cooperative_profile import CooperativeProfile
 from iam_profile.domain.model.queries.get_producer_profile_query import GetProducerProfileQuery
 from iam_profile.domain.model.queries.get_cooperative_profile_query import GetCooperativeProfileQuery
+from iam_profile.domain.model.queries.get_all_producers_query import GetAllProducersQuery
 from iam_profile.infrastructure.persistence.database.repositories.producer_profile_repository import \
     ProducerProfileRepository
 from iam_profile.infrastructure.persistence.database.repositories.cooperative_profile_repository import \
     CooperativeProfileRepository
+
 
 
 class ProfileQueryService:
@@ -40,3 +42,7 @@ class ProfileQueryService:
                 detail="Cooperative profile not found"
             )
         return profile
+
+    def handle_get_all_producers(self, query: GetAllProducersQuery) -> list[type[ProducerProfile]]:
+        """Obtiene todos los perfiles de productores"""
+        return self.producer_repository.find_all()

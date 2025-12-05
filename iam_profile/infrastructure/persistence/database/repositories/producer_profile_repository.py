@@ -23,3 +23,7 @@ class ProducerProfileRepository:
     def find_by_id(self, profile_id: int) -> Optional[ProducerProfile]:
         """Busca perfil por ID"""
         return self.db.query(ProducerProfile).filter(ProducerProfile.id == profile_id).first()
+
+    def find_all(self) -> list[type[ProducerProfile]]:
+        """Obtiene todos los perfiles de productores"""
+        return self.db.query(ProducerProfile).all()
